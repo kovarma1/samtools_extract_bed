@@ -34,6 +34,8 @@
 # Created: 2025-11-12
 #===============================================================================
 
+
+
 set -euo pipefail
 
 #---------------------------#
@@ -77,3 +79,52 @@ benchmark_extraction() {
     echo "Running benchmark mode..."
     echo "BED: $bed_file" > "$benchmark_log"
     echo "BAM: $input_bam" >> "$benchmark_log"
+    echo "Threads: $threads" >> "$benchmark_log"
+    echo "----------------------------------" >> "$benchmark_log"
+
+    # --- Method 1: BED via -L (reference) ---
+    local start1=$(date +%s.%N)
+    samtools view -@ "$threads" -bh "$input_bam" -L "$bed_file" > "$ref_output"
+    local end1=$(date +%s.%N)
+    local elapsed1=$(echo "$end1 - $start1" | bc)
+
+    echo "[Method 1] samtools -L (direct BED)" >> "$benchmark_log"
+    echo "Elapsed: ${elapsed1}s" >> "$benchmark_log"
+    echo "----------------------------------" >> "$benchmark_log"
+
+    # --- Method 2: expanded region list ---
+    local start2=$(date +%s.%N)
+    extract_bam_regions "$bed_file" "$input_bam" "$threads" "$output_bam"
+    local end2=$(date +%s.%N)
+    local elapsed2=$(echo "$end2 - $start2" | bc)
+
+    echo "[Method 2] expanded region list" >> "$benchmark_log"
+    echo "Elapsed: ${elapsed2}s" >> "$benchmark_log"
+    echo "----------------------------------" >> "$benchmark_log"
+
+    echo "Benchmark complete."
+    echo "Results saved to: $benchmark_log"
+    echo "Outputs: $output_bam and $ref_output"
+}
+
+#---------------------------#
+# Main entry point
+#---------------------------#
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    if [[ "${1:-}" == "-h" || $# -lt 4 ]]; then
+        grep '^#' "$0" | sed -E 's/^# ?//'
+        exit 0
+    fi
+
+    bed_file="$1"
+    input_bam="$2"
+    threads="$3"
+    output_bam="$4"
+    mode="${5:-}"
+
+    if [[ "$mode" == "benchmark" ]]; then
+        benchmark_extraction "$bed_file" "$input_bam" "$threads" "$output_bam"
+    else
+        extract_bam_regions "$bed_file" "$input_bam" "$threads" "$output_bam"
+    fi
+fi
