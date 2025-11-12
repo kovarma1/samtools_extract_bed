@@ -1,0 +1,6 @@
+----------------------------------
+[Method 1] samtools -L (direct BED)
+Elapsed: 1:02.91	User: 44.13	System: 3.69
+[Method 2] samtools with expanded regions
+Elapsed: 0:00.55	User: 1.48	System: 0.07
+----------------------------------
